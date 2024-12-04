@@ -1,0 +1,14 @@
+name: 'DeepL Translator'
+description: 'TMGMT implementation of DeepL Translate Service.'
+package: 'Translation Management'
+core_version_requirement: ^9  || ^10
+dependencies:
+  - tmgmt:tmgmt
+configure: entity.tmgmt_translator.collection
+type: module
+php: 7.4
+
+# Information added by Drupal.org packaging script on 2024-05-15
+version: '2.2.2'
+project: 'tmgmt_deepl'
+datestamp: 1715796596

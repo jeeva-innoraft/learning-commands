@@ -1,0 +1,12 @@
+name: 'DeepL Pro Translate Service Testing Mocker'
+description: 'Provides mock service to test DeepL Pro Translator.'
+type: module
+core_version_requirement: ^9 || ^10
+package: Testing
+dependencies:
+ - tmgmt_deepl:tmgmt_deepl
+
+# Information added by Drupal.org packaging script on 2024-05-15
+version: '2.2.2'
+project: 'tmgmt_deepl'
+datestamp: 1715796596

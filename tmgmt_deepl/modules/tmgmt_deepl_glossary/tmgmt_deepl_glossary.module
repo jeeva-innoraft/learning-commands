@@ -1,0 +1,132 @@
+<?php
+
+/**
+ * @file
+ * Contains tmgmt_deepl_glossary.module.
+ */
+
+use Drupal\Core\Entity\EntityFormInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\tmgmt\Entity\Job;
+use Drupal\tmgmt\JobInterface;
+use Drupal\tmgmt\TranslatorInterface;
+use Drupal\tmgmt_deepl_glossary\DeeplGlossaryInterface;
+use Drupal\tmgmt_deepl_glossary\Entity\DeeplGlossary;
+
+/**
+ * Implements hook_tmgmt_deepl_checkout_settings_form_alter().
+ */
+function tmgmt_deepl_glossary_tmgmt_deepl_checkout_settings_form_alter(array &$form, JobInterface $job): void {
+  // Get matching glossaries for the job.
+  $glossaries = DeeplGlossary::getMatchingGlossaries(strval($job->getTranslatorId()), $job->getSourceLangcode(), $job->getTargetLangcode());
+  // Build select field with available glossaries if multiple glossaries
+  // are allowed for source/ target language combination.
+  if (_tmgmt_deepl_glossary_has_checkout_settings($job, $glossaries)) {
+    $glossary_options = [];
+    /** @var \Drupal\tmgmt_deepl_glossary\DeeplGlossaryInterface $glossary */
+    foreach ($glossaries as $glossary) {
+      $glossary_options[$glossary->id()] = $glossary->label();
+    }
+
+    // Add glossary selection.
+    $form['glossary_id'] = [
+      '#type' => 'select',
+      '#title' => t('Select DeepL glossary'),
+      '#required' => TRUE,
+      '#options' => $glossary_options,
+      '#description' => t('Use selected glossary to customize translations (only glossaries with matching source and target language are listed).'),
+      '#default_value' => $job->getSetting('glossary_id') ?? '',
+    ];
+  }
+}
+
+/**
+ * Implements hook_tmgmt_deepl_has_checkout_settings_alter().
+ */
+function tmgmt_deepl_glossary_tmgmt_deepl_has_checkout_settings_alter(bool &$has_checkout_settings, JobInterface $job): void {
+  // Get matching glossaries for the job.
+  $glossaries = DeeplGlossary::getMatchingGlossaries(strval($job->getTranslatorId()), $job->getSourceLangcode(), $job->getTargetLangcode());
+  $has_checkout_settings = _tmgmt_deepl_glossary_has_checkout_settings($job, $glossaries);
+}
+
+/**
+ * Implements hook_tmgmt_deepl_build_configuration_form_alter().
+ */
+function tmgmt_deepl_glossary_tmgmt_deepl_build_configuration_form_alter(array &$form, FormStateInterface $form_state): void {
+  // Check for valid form object - we should receive entity form object here.
+  $translator = NULL;
+  if ($form_state->getFormObject() instanceof EntityFormInterface) {
+    $translator = $form_state->getFormObject()->getEntity();
+  }
+
+  // Add tmgmt_deepl_glossary wrapper.
+  $form['tmgmt_deepl_glossary'] = [
+    '#type' => 'details',
+    '#title' => t('DeepL glossary'),
+    '#open' => FALSE,
+  ];
+
+  // Allow multiple glossaries for source/ target language combination.
+  /** @var array $tmgmt_deepl_glossary_settings */
+  $tmgmt_deepl_glossary_settings = ($translator instanceof TranslatorInterface) ? $translator->getSetting('tmgmt_deepl_glossary') : [];
+  $form['tmgmt_deepl_glossary']['allow_multiple'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Allow multiple glossaries for source/ target language combination.'),
+    '#description' => t('By default, it is possible to create only one glossary per source/target language combination, and the matching glossary will be selected automatically in the translation workflow. This setting will also enable selection of glossaries in the checkout form of a translation job.'),
+    '#default_value' => isset($tmgmt_deepl_glossary_settings['allow_multiple']) ? 1 : 0,
+  ];
+
+}
+
+/**
+ * Implements hook_tmgmt_deepl_query_string_alter().
+ */
+function tmgmt_deepl_glossary_tmgmt_deepl_query_string_alter(Job $job, string &$query_string, array $query_params): void {
+  // Add glossary_id based on job settings.
+  if ($job->getSetting('glossary_id') !== NULL) {
+    $glossary = Drupal::entityTypeManager()->getStorage('deepl_glossary')->load($job->getSetting('glossary_id'));
+    if ($glossary instanceof DeeplGlossaryInterface) {
+      $query_string .= '&glossary_id=' . $glossary->getGlossaryId();
+    }
+  }
+  else {
+    // Auto select matching glossary_id based on source and target language.
+    $glossaries = DeeplGlossary::getMatchingGlossaries(strval($job->getTranslatorId()), $job->getSourceLangcode(), $job->getTargetLangcode());
+    if (count($glossaries) > 0) {
+      $glossary = reset($glossaries);
+      $query_string .= '&glossary_id=' . $glossary->getGlossaryId();
+    }
+  }
+}
+
+/**
+ * Overwrite menu_local_action styling for "Sync DeepL glossaries" link.
+ */
+function tmgmt_deepl_glossary_preprocess_menu_local_action(array &$variables): void {
+  if (isset($variables['link']['#url']) && $variables['link']['#url']->getRouteName() == 'tmgmt_deepl_glossary.sync_form') {
+    $variables['link']['#options']['attributes']['class'] = ['button'];
+  }
+}
+
+/**
+ * Helper function to check for checkout settings form based on job data.
+ *
+ * @param \Drupal\tmgmt\JobInterface $job
+ *   The tmgmt job entity.
+ * @param array $glossaries
+ *   Array of matching glossaries for the job.
+ *
+ * @return bool
+ *   Whether a checkout settings should be shown.
+ */
+function _tmgmt_deepl_glossary_has_checkout_settings(JobInterface $job, array $glossaries = []): bool {
+  // Allow multiple glossaries for source/ target language combination.
+  $translator = $job->getTranslator();
+  /** @var array $tmgmt_deepl_glossary_settings */
+  $tmgmt_deepl_glossary_settings = $translator->getSetting('tmgmt_deepl_glossary');
+  if (count($glossaries) > 1 && $tmgmt_deepl_glossary_settings['allow_multiple']) {
+    return TRUE;
+  }
+
+  return FALSE;
+}

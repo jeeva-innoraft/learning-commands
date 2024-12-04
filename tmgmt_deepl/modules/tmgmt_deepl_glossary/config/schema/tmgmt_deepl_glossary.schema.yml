@@ -1,0 +1,10 @@
+field.value.deepl_glossary_item:
+  type: mapping
+  label: 'DeepL glossary item'
+  mapping:
+    subject:
+      type: string
+      label: 'Subject'
+    definition:
+      type: string
+      label: 'Definition'

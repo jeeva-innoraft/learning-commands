@@ -1,0 +1,41 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the tmgmt_deepl_glossary module.
+ */
+
+use Symfony\Component\Yaml\Yaml;
+
+/**
+ * Add permission for existing 'administer deepl_glossary entities' permission.
+ */
+function tmgmt_deepl_glossary_update_8001(): void {
+  // Load all available user roles and rewrite permissions.
+  foreach (user_roles() as $user_role) {
+    if ($user_role->hasPermission('administer deepl_glossary entities')) {
+      $user_role->grantPermission('access deepl_glossary overview');
+      $user_role->save();
+    }
+  }
+}
+
+/**
+ * Use new permission 'access deepl_glossary overview' for deepl_glossary view.
+ */
+function tmgmt_deepl_glossary_update_8002(): void {
+  $view_config_name = 'views.view.tmgmt_deepl_glossary';
+  $module_handler = \Drupal::moduleHandler();
+  $module_path = $module_handler->getModule('tmgmt_deepl')->getPath();
+  $config_path = $module_path . '/modules/tmgmt_deepl_glossary/config/install/' . $view_config_name . '.yml';
+  if (file_exists($config_path)) {
+    /** @var array $existing_config */
+    $existing_config = \Drupal::config($view_config_name)->get();
+    /** @var array $updated_config */
+    $updated_config = Yaml::parseFile($config_path);
+    // Merge the updated configuration into the existing configuration.
+    $new_config = array_merge($existing_config, $updated_config);
+    // Save the merged configuration.
+    \Drupal::configFactory()->getEditable($view_config_name)->setData($new_config)->save(TRUE);
+  }
+}

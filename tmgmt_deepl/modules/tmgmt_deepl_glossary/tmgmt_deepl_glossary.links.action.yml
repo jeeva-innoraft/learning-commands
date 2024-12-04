@@ -1,0 +1,11 @@
+tmgmt_deepl_glossary.link_add:
+  route_name: entity.deepl_glossary.add_form
+  title: 'Add DeepL glossary'
+  appears_on:
+    - entity.deepl_glossary.collection
+
+tmgmt_deepl_glossary.link_sync:
+  route_name: tmgmt_deepl_glossary.sync_form
+  title: 'Sync DeepL glossaries'
+  appears_on:
+    - entity.deepl_glossary.collection

@@ -1,0 +1,8 @@
+tmgmt_deepl_glossary.sync_form:
+  path: '/admin/tmgmt/deepl_glossaries/sync'
+  defaults:
+    _form: 'Drupal\tmgmt_deepl_glossary\Form\DeeplGlossarySyncForm'
+  options:
+    _admin_route: TRUE
+  requirements:
+    _permission: 'administer deepl_glossary entities'
